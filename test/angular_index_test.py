@@ -134,7 +134,7 @@ class AngularIndexTest(TestCase):
         i.add_item(0, [1.1, 2.2, 3.3])
         i.add_item(1, [4.4, 5.5, 6.6])
         i.add_item(2, [7.7, 8.8, 9.9])
- 
+
         numpy.testing.assert_array_almost_equal(i.get_item_vector(0), [1.1, 2.2, 3.3])
         self.assertTrue(i.build(10))
         self.assertTrue(i.save('blah.ann'))
@@ -226,4 +226,3 @@ class AngularIndexTest(TestCase):
         indices, dists = a.get_nns_by_vector([1, 0, 0], 3, include_distances=True)
         self.assertEquals(indices, [0])
         self.assertAlmostEqual(dists[0] ** 2, 0.0)
-    

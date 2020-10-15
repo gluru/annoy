@@ -513,6 +513,90 @@ struct Angular : Base {
   }
 };
 
+struct Cosine : Base {
+  template<typename S, typename T>
+  struct Node {
+    /*
+     * We store a binary tree where each node has two things
+     * - A vector associated with it
+     * - Two children
+     * All nodes occupy the same amount of memory
+     * All nodes with n_descendants == 1 are leaf nodes.
+     * A memory optimization is that for nodes with 2 <= n_descendants <= K,
+     * we skip the vector. Instead we store a list of all descendants. K is
+     * determined by the number of items that fits in the space of the vector.
+     * For nodes with n_descendants == 1 the vector is a data point.
+     * For nodes with n_descendants > K the vector is the normal of the split plane.
+     * Note that we can't really do sizeof(node<T>) because we cheat and allocate
+     * more memory to be able to fit the vector outside
+     */
+    S n_descendants;
+    union {
+      S children[2]; // Will possibly store more than 2
+      T norm;
+    };
+    T v[V_ARRAY_SIZE];
+  };
+  template<typename S, typename T>
+  static inline T distance(const Node<S, T>* x, const Node<S, T>* y, int f) {
+    // want to calculate:
+    // 1 - ((a.b) / |a|*|b|)
+    T mx = get_norm(x->v, f);
+    T my = get_norm(y->v, f);
+    if (mx == 0 || my == 0)
+      return 1;
+    T d_xy = dot(x->v, y->v, f);
+    return 1 - (d_xy / (mx*my));
+  }
+  template<typename S, typename T>
+  static inline T margin(const Node<S, T>* n, const T* y, int f) {
+    return dot(n->v, y, f);
+  }
+  template<typename S, typename T, typename Random>
+  static inline bool side(const Node<S, T>* n, const T* y, int f, Random& random) {
+    T dot = margin(n, y, f);
+    if (dot != 0)
+      return (dot > 0);
+    else
+      return (bool)random.flip();
+  }
+  template<typename S, typename T, typename Random>
+  static inline void create_split(const vector<Node<S, T>*>& nodes, int f, size_t s, Random& random, Node<S, T>* n) {
+    Node<S, T>* p = (Node<S, T>*)alloca(s);
+    Node<S, T>* q = (Node<S, T>*)alloca(s);
+    two_means<T, Random, Cosine, Node<S, T> >(nodes, f, random, true, p, q);
+    for (int z = 0; z < f; z++)
+      n->v[z] = p->v[z] - q->v[z];
+    Base::normalize<T, Node<S, T> >(n, f);
+  }
+  template<typename T>
+  static inline T normalized_distance(T distance) {
+    // 1.0 - ((1.0 + dot(x*y) / (mag_x * mag_y)) / 2.0)
+    // ( distance / 2.0 )
+    // Used when requesting distances from Python layer
+    // Turns out sometimes the squared distance is -0.0
+    // so we have to make sure it's a positive number.
+    return (distance / 2.0);
+  }
+  template<typename T>
+  static inline T pq_distance(T distance, T margin, int child_nr) {
+    if (child_nr == 0)
+      margin = -margin;
+    return std::min(distance, margin);
+  }
+  template<typename T>
+  static inline T pq_initial_value() {
+    return numeric_limits<T>::infinity();
+  }
+  template<typename S, typename T>
+  static inline void init_node(Node<S, T>* n, int f) {
+    n->norm = dot(n->v, n->v, f);
+  }
+  static const char* name() {
+    return "cosine";
+  }
+};
+
 
 struct DotProduct : Angular {
   template<typename S, typename T>
