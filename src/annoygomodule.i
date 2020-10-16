@@ -89,6 +89,7 @@
 %include "annoygomodule.h"
 
 %feature("notabstract") GoAnnoyIndexAngular;
+%feature("notabstract") GoAnnoyIndexCosine;
 %feature("notabstract") GoAnnoyIndexEuclidean;
 %feature("notabstract") GoAnnoyIndexManhattan;
 %feature("notabstract") GoAnnoyIndexDotProduct;
